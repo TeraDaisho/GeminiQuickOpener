@@ -21,7 +21,7 @@ function setupEventListeners() {
 
 function switchView(viewName) {
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-    document.getElementById(`view - ${viewName} `).classList.add('active');
+    document.getElementById(`view-${viewName}`).classList.add('active');
 
     if (viewName === 'main') {
         // Reload dropdown when returning to main to reflect changes
@@ -61,53 +61,25 @@ async function renderSettingsList() {
         const item = document.createElement('div');
         item.className = 'gem-item';
 
+        item.innerHTML = `
       <div class="gem-info">
         <div class="gem-name">${gem.name}</div>
         <div class="gem-url">${gem.url}</div>
       </div>
       <button class="delete-btn" data-index="${index}">Delete</button>
-        `;
-    
-    listEl.appendChild(item);
-  });
+    `;
 
-  // Add click listeners for delete buttons
-  document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const index = e.target.getAttribute('data-index');
-      await deleteGem(index);
+        listEl.appendChild(item);
     });
-  });
+
+    // Add click listeners for delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const index = e.target.getAttribute('data-index');
+            await deleteGem(index);
+        });
+    });
 }
-
-// ... (rest of functions) ...
-
-function constructGeminiUrl(originalUrl, promptText) {
-  const baseUrl = "https://gemini.google.com";
-  let finalUrl = baseUrl;
-  
-  // Robustly trim and cleanup the input URL
-  let cleanUrl = (originalUrl || "").trim();
-
-  const gemIdMatch = cleanUrl.match(/\/gems\/items\/([^/?\s]+)/) || cleanUrl.match(/\/gem\/([^/?\s]+)/);
-  
-  if (gemIdMatch) {
-    const gemId = gemIdMatch[1];
-    finalUrl = `${ baseUrl } /gem/${ gemId } `;
-  } else {
-    // Default /app or just base
-    finalUrl = baseUrl; 
-  }
-
-  if (promptText) {
-    const encodedPrompt = encodeURIComponent(promptText);
-    const separator = finalUrl.includes('?') ? '&' : '?';
-    finalUrl += `${ separator } prompt_text = ${ encodedPrompt } `;
-  }
-
-  return finalUrl;
-}
-
 
 async function addNewGem() {
     const nameInput = document.getElementById('new-gem-name');
@@ -157,7 +129,6 @@ async function deleteGem(index) {
     renderSettingsList();
 }
 
-
 async function handleOpen() {
     const statusEl = document.getElementById('status');
     statusEl.textContent = "Gathering context...";
@@ -172,13 +143,13 @@ async function handleOpen() {
         let contextText = "";
 
         if (includeUrl && tab?.url) {
-            contextText += `引用元URL: ${ tab.url } \n\n`;
+            contextText += `引用元URL: ${tab.url}\n\n`;
         }
 
         if (includeSelection && tab?.id) {
             const selection = await getTabSelection(tab.id);
             if (selection) {
-                contextText += `引用テキスト: \n${ selection } \n\n`;
+                contextText += `引用テキスト:\n${selection}\n\n`;
             }
         }
 
@@ -199,6 +170,32 @@ async function handleOpen() {
     }
 }
 
+function constructGeminiUrl(originalUrl, promptText) {
+    const baseUrl = "https://gemini.google.com";
+    let finalUrl = baseUrl;
+
+    // Robustly trim and cleanup the input URL
+    let cleanUrl = (originalUrl || "").trim();
+
+    const gemIdMatch = cleanUrl.match(/\/gems\/items\/([^/?\s]+)/) || cleanUrl.match(/\/gem\/([^/?\s]+)/);
+
+    if (gemIdMatch) {
+        const gemId = gemIdMatch[1];
+        finalUrl = `${baseUrl}/gem/${gemId}`;
+    } else {
+        // Default /app or just base
+        finalUrl = baseUrl;
+    }
+
+    if (promptText) {
+        const encodedPrompt = encodeURIComponent(promptText);
+        const separator = finalUrl.includes('?') ? '&' : '?';
+        finalUrl += `${separator}prompt_text=${encodedPrompt}`;
+    }
+
+    return finalUrl;
+}
+
 function getTabSelection(tabId) {
     return chrome.scripting.executeScript({
         target: { tabId },
@@ -213,4 +210,3 @@ function getTabSelection(tabId) {
         return "";
     });
 }
-
