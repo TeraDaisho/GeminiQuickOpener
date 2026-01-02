@@ -34,7 +34,7 @@ async function handleOpen() {
     const statusEl = document.getElementById('status');
     statusEl.textContent = "Gathering context...";
 
-    const gemUrl = document.getElementById('gem-select').value;
+    const gemUrlInput = document.getElementById('gem-select').value;
     const includeUrl = document.getElementById('include-url').checked;
     const includeSelection = document.getElementById('include-selection').checked;
 
@@ -56,31 +56,49 @@ async function handleOpen() {
 
         statusEl.textContent = "Opening Gemini...";
 
+        // Construct Target URL with Deep Link
+        const targetUrl = constructGeminiUrl(gemUrlInput, contextText);
+
         // Open Gemini Tab
-        const newTab = await chrome.tabs.create({ url: gemUrl });
+        await chrome.tabs.create({ url: targetUrl });
 
-        // Wait for load and inject
-        if (contextText.trim() !== "") {
-            statusEl.textContent = "Waiting for page load...";
-
-            // We need to wait for the tab to be ready. 
-            // We can use onUpdated listener or recursive retry in executeScript.
-            // Recursive retry in executeScript is cleaner here as it avoids background script complexity for this simple task.
-
-            chrome.scripting.executeScript({
-                target: { tabId: newTab.id },
-                func: injectPrompt,
-                args: [contextText]
-            });
-        }
-
-        // Close popup (optional, but good UX if successful)
-        // window.close(); 
+        // Close popup
+        window.close();
 
     } catch (err) {
         statusEl.textContent = "Error: " + err.message;
         console.error(err);
     }
+}
+
+function constructGeminiUrl(originalUrl, promptText) {
+    const baseUrl = "https://gemini.google.com";
+    let finalUrl = baseUrl;
+
+    // Check if it's a specific Gem
+    // Patterns: 
+    // 1. https://gemini.google.com/app/gems/items/[ID] (Standard Web URL)
+    // 2. https://gemini.google.com/gem/[ID] (Deep Link format)
+    // We want to normalize to /gem/[ID] for the deep link to work best with prompts?
+    // Actually, the article says: https://gemini.google.com/gem/[ID]?prompt_text=...
+
+    const gemIdMatch = originalUrl.match(/\/gems\/items\/([^/?]+)/) || originalUrl.match(/\/gem\/([^/?]+)/);
+
+    if (gemIdMatch) {
+        const gemId = gemIdMatch[1];
+        finalUrl = `${baseUrl}/gem/${gemId}`;
+    } else {
+        // Default /app or just base
+        finalUrl = baseUrl; // defaults to standard chat
+    }
+
+    if (promptText) {
+        const encodedPrompt = encodeURIComponent(promptText);
+        const separator = finalUrl.includes('?') ? '&' : '?';
+        finalUrl += `${separator}prompt_text=${encodedPrompt}`;
+    }
+
+    return finalUrl;
 }
 
 function getTabSelection(tabId) {
@@ -98,57 +116,3 @@ function getTabSelection(tabId) {
     });
 }
 
-// This function runs INSIDE the Gemini page
-async function injectPrompt(textToInject) {
-    const MAX_RETRIES = 20; // 20 * 500ms = 10 seconds
-    const RETRY_INTERVAL = 500;
-
-    function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    function findInput() {
-        // Try multiple selectors for Gemini's input box
-        // 1. Contenteditable div (most common in modern chat apps)
-        // 2. Textarea
-        const selectors = [
-            'div[contenteditable="true"]',
-            'div[role="textbox"]',
-            'textarea',
-            '.ql-editor' // sometimes used in rich text editors
-        ];
-
-        for (const s of selectors) {
-            const el = document.querySelector(s);
-            if (el) return el;
-        }
-        return null;
-    }
-
-    for (let i = 0; i < MAX_RETRIES; i++) {
-        const inputEl = findInput();
-        if (inputEl) {
-            // Focus and Input
-            inputEl.focus();
-
-            // For contenteditable, we often need to simulate text input event or modify innerHTML
-            // Simpler approach: execCommand (deprecated but often works) or dispatch events
-
-            // Try modifying textContent/innerHTML first for contenteditable
-            if (inputEl.isContentEditable) {
-                // Append text. Note: Gemini might verify user interaction. 
-                // Best way is document.execCommand('insertText') if supported, as it triggers events.
-                document.execCommand('insertText', false, textToInject);
-            } else {
-                inputEl.value += textToInject;
-                inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-
-            // Try to scroll to bottom - optional
-            return;
-        }
-        await sleep(RETRY_INTERVAL);
-    }
-
-    console.error("Gemini Quick Opener: Could not find input box.");
-}
