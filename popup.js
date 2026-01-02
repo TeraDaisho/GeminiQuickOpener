@@ -86,21 +86,30 @@ async function addNewGem() {
     const urlInput = document.getElementById('new-gem-url');
 
     const name = nameInput.value.trim();
-    const url = urlInput.value.trim();
+    let urlStr = urlInput.value.trim();
 
-    if (!name || !url) {
+    if (!name || !urlStr) {
         alert('Please enter both name and URL.');
         return;
     }
 
-    if (!url.startsWith('https://gemini.google.com')) {
-        alert('URL must start with https://gemini.google.com');
+    // Strict URL Validation
+    try {
+        const urlObj = new URL(urlStr);
+        if (urlObj.hostname !== 'gemini.google.com') {
+            alert('URL must be for gemini.google.com');
+            return;
+        }
+        // Update urlStr to the normalized href (removes some edge case formatting issues)
+        urlStr = urlObj.href;
+    } catch (e) {
+        alert('Invalid URL format.');
         return;
     }
 
     const data = await chrome.storage.sync.get({ gems: DEFAULT_GEMS });
     const gems = data.gems;
-    gems.push({ name, url });
+    gems.push({ name, url: urlStr });
 
     await chrome.storage.sync.set({ gems });
 
@@ -160,36 +169,6 @@ async function handleOpen() {
         statusEl.textContent = "Error: " + err.message;
         console.error(err);
     }
-}
-
-function constructGeminiUrl(originalUrl, promptText) {
-    const baseUrl = "https://gemini.google.com";
-    let finalUrl = baseUrl;
-
-    // Check if it's a specific Gem
-    // Patterns: 
-    // 1. https://gemini.google.com/app/gems/items/[ID] (Standard Web URL)
-    // 2. https://gemini.google.com/gem/[ID] (Deep Link format)
-    // We want to normalize to /gem/[ID] for the deep link to work best with prompts?
-    // Actually, the article says: https://gemini.google.com/gem/[ID]?prompt_text=...
-
-    const gemIdMatch = originalUrl.match(/\/gems\/items\/([^/?]+)/) || originalUrl.match(/\/gem\/([^/?]+)/);
-
-    if (gemIdMatch) {
-        const gemId = gemIdMatch[1];
-        finalUrl = `${baseUrl} /gem/${gemId} `;
-    } else {
-        // Default /app or just base
-        finalUrl = baseUrl; // defaults to standard chat
-    }
-
-    if (promptText) {
-        const encodedPrompt = encodeURIComponent(promptText);
-        const separator = finalUrl.includes('?') ? '&' : '?';
-        finalUrl += `${separator} prompt_text = ${encodedPrompt} `;
-    }
-
-    return finalUrl;
 }
 
 function getTabSelection(tabId) {
