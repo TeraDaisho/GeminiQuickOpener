@@ -30,8 +30,8 @@ Chromeのその場から、Google Geminiを特定のプロンプト付きで素�
 
 ### 基本的な使い方
 1.  **ポップアップ**: アイコンをクリックして「Open Gem」ボタンを押す。
-2.  **右クリックメニュー**: ページ上で右クリックし、「Open with Gemini」を選択すると、**リストの一番上のGem**（デフォルト）が起動します。
-3.  **ショートカットキー**: `Command+Shift+E` (Mac) / `Ctrl+Shift+E` (Windows) を押すと、即座に**リストの一番上のGem**が起動します。
+2.  **右クリックメニュー**: ページ上で右クリック -> **「Gemini Quick Opener」** をポイントすると、登録したGemの一覧が表示されます。任意のGemをクリックして起動できます。
+3.  **ショートカットキー**: `Command+Shift+E` (Mac) / `Ctrl+Shift+E` (Windows) を押すと、即座に**リストの一番上のGem**（デフォルト）が起動します。
     - ※ショートカットキーは `chrome://extensions/shortcuts` から変更可能です。
 
 ### Gem（ショートカット）の追加・管理
