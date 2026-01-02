@@ -5,12 +5,38 @@ const DEFAULT_GEMS = [
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load Gems
+    await loadGems();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Main View Actions
+    document.getElementById('open-btn').addEventListener('click', handleOpen);
+    document.getElementById('go-settings-btn').addEventListener('click', () => switchView('settings'));
+
+    // Settings View Actions
+    document.getElementById('back-btn').addEventListener('click', () => switchView('main'));
+    document.getElementById('add-gem-btn').addEventListener('click', addNewGem);
+}
+
+function switchView(viewName) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.getElementById(`view - ${viewName} `).classList.add('active');
+
+    if (viewName === 'main') {
+        // Reload dropdown when returning to main to reflect changes
+        loadGems();
+    } else if (viewName === 'settings') {
+        renderSettingsList();
+    }
+}
+
+async function loadGems() {
     const data = await chrome.storage.sync.get({ gems: DEFAULT_GEMS });
     const select = document.getElementById('gem-select');
+    select.innerHTML = '';
 
     if (data.gems.length === 0) {
-        // Should not happen due to default, but safe fallback
         const option = document.createElement('option');
         option.text = "No Gems Configured";
         select.add(option);
@@ -22,13 +48,78 @@ document.addEventListener('DOMContentLoaded', async () => {
             option.value = gem.url;
             select.add(option);
         });
+        document.getElementById('open-btn').disabled = false;
+    }
+}
+
+async function renderSettingsList() {
+    const data = await chrome.storage.sync.get({ gems: DEFAULT_GEMS });
+    const listEl = document.getElementById('settings-gem-list');
+    listEl.innerHTML = '';
+
+    data.gems.forEach((gem, index) => {
+        const item = document.createElement('div');
+        item.className = 'gem-item';
+
+        item.innerHTML = `
+    < div class="gem-info" >
+        <div class="gem-name">${gem.name}</div>
+        <div class="gem-url">${gem.url}</div>
+      </div >
+    <button class="delete-btn" data-index="${index}">Delete</button>
+`;
+
+        listEl.appendChild(item);
+    });
+
+    // Add click listeners for delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const index = e.target.getAttribute('data-index');
+            await deleteGem(index);
+        });
+    });
+}
+
+async function addNewGem() {
+    const nameInput = document.getElementById('new-gem-name');
+    const urlInput = document.getElementById('new-gem-url');
+
+    const name = nameInput.value.trim();
+    const url = urlInput.value.trim();
+
+    if (!name || !url) {
+        alert('Please enter both name and URL.');
+        return;
     }
 
-    // Check storage for last used Gem index (optional - implement later if needed)
+    if (!url.startsWith('https://gemini.google.com')) {
+        alert('URL must start with https://gemini.google.com');
+        return;
+    }
 
-    // Trigger Open
-    document.getElementById('open-btn').addEventListener('click', handleOpen);
-});
+    const data = await chrome.storage.sync.get({ gems: DEFAULT_GEMS });
+    const gems = data.gems;
+    gems.push({ name, url });
+
+    await chrome.storage.sync.set({ gems });
+
+    nameInput.value = '';
+    urlInput.value = '';
+    renderSettingsList();
+}
+
+async function deleteGem(index) {
+    if (!confirm('Delete this Gem?')) return;
+
+    const data = await chrome.storage.sync.get({ gems: DEFAULT_GEMS });
+    const gems = data.gems;
+    gems.splice(index, 1);
+
+    await chrome.storage.sync.set({ gems });
+    renderSettingsList();
+}
+
 
 async function handleOpen() {
     const statusEl = document.getElementById('status');
@@ -44,13 +135,13 @@ async function handleOpen() {
         let contextText = "";
 
         if (includeUrl && tab?.url) {
-            contextText += `引用元URL: ${tab.url}\n\n`;
+            contextText += `引用元URL: ${tab.url} \n\n`;
         }
 
         if (includeSelection && tab?.id) {
             const selection = await getTabSelection(tab.id);
             if (selection) {
-                contextText += `引用テキスト:\n${selection}\n\n`;
+                contextText += `引用テキスト: \n${selection} \n\n`;
             }
         }
 
@@ -86,7 +177,7 @@ function constructGeminiUrl(originalUrl, promptText) {
 
     if (gemIdMatch) {
         const gemId = gemIdMatch[1];
-        finalUrl = `${baseUrl}/gem/${gemId}`;
+        finalUrl = `${baseUrl} /gem/${gemId} `;
     } else {
         // Default /app or just base
         finalUrl = baseUrl; // defaults to standard chat
@@ -95,7 +186,7 @@ function constructGeminiUrl(originalUrl, promptText) {
     if (promptText) {
         const encodedPrompt = encodeURIComponent(promptText);
         const separator = finalUrl.includes('?') ? '&' : '?';
-        finalUrl += `${separator}prompt_text=${encodedPrompt}`;
+        finalUrl += `${separator} prompt_text = ${encodedPrompt} `;
     }
 
     return finalUrl;

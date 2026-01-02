@@ -20,29 +20,134 @@
         label {
             font-size: 0.9rem;
             cursor: pointer;
-        }
 
-        select {
-            margin-bottom: 15px;
-        }
+            body {
+                width: 320px;
+                padding: 15px;
+            }
 
-        button {
-            width: 100%;
-            margin-top: 10px;
-        }
+            h3 {
+                margin-bottom: 10px;
+                font-size: 1.2rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
 
-        .status {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 5px;
-            text-align: center;
-        }
+            label {
+                font-size: 0.9rem;
+                cursor: pointer;
+            }
+
+            select {
+                margin-bottom: 15px;
+            }
+
+            button {
+                width: 100%;
+                margin-top: 10px;
+            }
+
+            .status {
+                font-size: 0.8rem;
+                color: #666;
+                margin-top: 5px;
+                text-align: center;
+            }
+
+            /* View Switching */
+            .view {
+                display: none;
+            }
+
+            .view.active {
+                display: block;
+            }
+
+            /* Settings View Styles */
+            .settings-btn {
+                background: none;
+                border: none;
+                padding: 0;
+                color: #666;
+                width: auto;
+                font-size: 1.2rem;
+                cursor: pointer;
+                margin: 0;
+            }
+
+            .gem-list {
+                max-height: 200px;
+                overflow-y: auto;
+                margin-bottom: 15px;
+                border-top: 1px solid #eee;
+            }
+
+            .gem-item {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 0;
+                border-bottom: 1px solid #eee;
+            }
+
+            .gem-info {
+                flex-grow: 1;
+                overflow: hidden;
+            }
+
+            .gem-name {
+                font-weight: bold;
+                font-size: 0.9rem;
+            }
+
+            .gem-url {
+                font-size: 0.7rem;
+                color: #999;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .delete-btn {
+                background-color: #ff4444;
+                color: white;
+                border: none;
+                padding: 2px 8px;
+                font-size: 0.7rem;
+                width: auto;
+                margin: 0 0 0 10px;
+                border-radius: 4px;
+            }
+
+            .add-form {
+                background: #f9f9f9;
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 10px;
+            }
+
+            .add-form input {
+                margin-bottom: 5px;
+                font-size: 0.8rem;
+                padding: 5px;
+            }
+
+            .back-btn {
+                background-color: #666;
+                border-color: #666;
+                margin-top: 5px;
+            }
     </style>
 </head>
 
 <body>
-    <main>
-        <h3>Open with Gemini</h3>
+    <!-- Main View -->
+    <main id="view-main" class="view active">
+        <h3>
+            Open with Gemini
+            <button id="go-settings-btn" class="settings-btn" title="Settings">⚙️</button>
+        </h3>
 
         <label for="gem-select">Select Gem</label>
         <select id="gem-select">
@@ -61,6 +166,24 @@
 
         <button id="open-btn">Open Gem</button>
         <div id="status" class="status"></div>
+    </main>
+
+    <!-- Settings View -->
+    <main id="view-settings" class="view">
+        <h3>Settings</h3>
+
+        <div class="add-form">
+            <strong>Add New Gem</strong>
+            <input type="text" id="new-gem-name" placeholder="Name (e.g. My Gem)">
+            <input type="url" id="new-gem-url" placeholder="URL (gemini.google.com/...)">
+            <button id="add-gem-btn" class="contrast">Add Gem</button>
+        </div>
+
+        <div id="settings-gem-list" class="gem-list">
+            <!-- Populated by JS -->
+        </div>
+
+        <button id="back-btn" class="back-btn">Back</button>
     </main>
     <script src="popup.js"></script>
 </body>
